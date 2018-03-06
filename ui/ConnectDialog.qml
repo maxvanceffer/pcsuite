@@ -1,4 +1,4 @@
-import QtQuick.Dialogs 1.3
+import QtQuick.Dialogs 1.0
 import QtQuick 2.0
 
 Dialog {

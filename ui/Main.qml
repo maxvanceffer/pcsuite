@@ -1,56 +1,99 @@
 import QtQuick 2.0
-import QtQuick.Controls 1.4
+import QtQuick.Controls 1.3
+import QtGraphicalEffects 1.0
 
 ApplicationWindow {
     id: applicationWindow
-
-    width: 450
+    title: qsTr("PC Suite")
+    width: 650
     height: 600
 
-    ConnectDialog {
-        id: connectDialog
-        visible: false
+    Theme {
+        id: theme
     }
+
+//    ConnectDialog {
+//        id: connectDialog
+//        visible: false
+//    }
 
     Rectangle {
         id: header
+
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        color: '#373737'
+//        visible: false
+
+        color: theme.headerColor
         height: 50
 
         property int fontSize: 20
 
-        Row {
+        Text {
+            text: qsTr("PC Suite")
+
             anchors.left: parent.left
             anchors.leftMargin: 30
-            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-
-            spacing: 15
-
-            Label {
-                text: qsTr("Connect")
-                font.pixelSize: header.fontSize
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    hoverEnabled: true
-                    onClicked: connectDialog.visible = true
-                }
-            }
-
-            Label {
-                text: qsTr("Settings")
-                font.pixelSize: header.fontSize
-            }
-
-            Label {
-                text: qsTr("About")
-                font.pixelSize: header.fontSize
-            }
+            font.pixelSize: theme.titlePixelSize
+            color: theme.headerTextColor
         }
+
+        layer.enabled: true
+        layer.effect: DropShadow {
+            color: Qt.rgba(0.169, 0.169, 0.169, 0.3)
+            transparentBorder: true
+            horizontalOffset: 8
+            verticalOffset: 8
+        }
+    }
+
+    Sidebar {
+        id: sidebar
+        width: 200
+
+        anchors.left: parent.left
+        anchors.top: header.bottom
+        anchors.bottom: parent.bottom
+    }
+
+    StackView {
+        id: stackView
+        clip: true
+        anchors.left: sidebar.right
+        anchors.top: header.bottom
+        anchors.bottom: footer.top
+        anchors.right: parent.right
+
+        initialItem: MenuGrid {}
+
+        function navigateTo(source, properties) {
+            properties = properties || {}
+            var parts = ['file:/', AppPath, source]
+            console.log('Open path ', parts.join('/'))
+            stackView.push(parts.join('/'), properties)
+        }
+
+        function back() {
+            if (depth === 1) return
+
+            pop()
+        }
+    }
+
+    Footer {
+        id: footer
+
+        height: 60
+
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+    }
+
+    Component.onCompleted: {
+        visible = true
+        console.info('Root window created')
     }
 }
