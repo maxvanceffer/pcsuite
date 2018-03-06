@@ -39,3 +39,6 @@ CMakeLists.txt.user*
 
 # Other 
 *.qmlc
+
+# Jetbrains
+.idea

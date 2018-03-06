@@ -7,7 +7,7 @@ Item {
         'nearby': {title: qsTr("Near By"), icon: "images/search.svg", source: "/ui/DiscoveryPage.qml"},
         'info': {title: qsTr("Phone info"), source: "", icon: "images/search.svg"},
         'calendar': {title: qsTr("Calendar"), source: "", icon: "images/calendar.svg"},
-        'sms': {title: qsTr("Sms "), source: "", icon: "images/sms.svg"},
+        'sms': {title: qsTr("Sms "), source: "/ui/SmsPage.qml", icon: "images/sms.svg"},
         'calls': {title: qsTr("Calls"), source: "", icon: "images/calls.svg"},
         'manager': {title: qsTr("File manager"), source: "", icon: "images/file_manager.svg"}
     }

@@ -105,9 +105,9 @@ class Device(QObject):
     @type.setter
     def type(self, id_of_type):
         real_type = self.__type
-        if str(hex(int(id_of_type))) == '0x5a020c' or str(hex(int(id_of_type))) == '0x7a020c':
+        if id_of_type is not None and str(hex(int(id_of_type))) == '0x5a020c' or str(hex(int(id_of_type))) == '0x7a020c':
             real_type = 'phone'
-        elif str(hex(int(id_of_type))) == '0x240404':
+        elif id_of_type is None and str(hex(int(id_of_type))) == '0x240404':
             real_type = 'speaker'
 
         if real_type != self.__type:

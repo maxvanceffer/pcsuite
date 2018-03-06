@@ -1,5 +1,5 @@
 import QtQuick 2.4
-import Material 0.2
+//import Material 0.2
 //import Material.Extras 0.1
 
 MouseArea {
@@ -18,7 +18,7 @@ MouseArea {
     property bool circular: false
     property bool centered: false
 
-    property int focusWidth: width - Units.dp(32)
+    property int focusWidth: width - 32
     property bool focused
     property color focusColor: "transparent"
 
@@ -71,7 +71,7 @@ MouseArea {
 
         anchors.fill: parent
 
-        color: Theme.isDarkColor(focusColor) && focusColor.a > 0
+        color: focusColor && focusColor.a > 0
                 ? Qt.rgba(0,0,0,0.2) : Qt.rgba(0,0,0,0.1)
 
         opacity: showFocus && focused ? 1 : 0
