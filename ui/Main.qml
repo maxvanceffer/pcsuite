@@ -95,5 +95,9 @@ ApplicationWindow {
     Component.onCompleted: {
         visible = true
         console.info('Root window created')
+
+        if (BTManager.my_device.host && BTManager.my_device.host.length) {
+            BTManager.my_device.update()
+        }
     }
 }

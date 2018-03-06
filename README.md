@@ -1,6 +1,6 @@
-# pcsuite
-PC Suite for linux. Like original nokia pc suite
-
+# PC Suite (pcs)
+PC Suite is desktop application for controlling mobile devices from desktop. 
+For exmaple like Nokia PC Suite
 
 Related links:
   BT class type detect
