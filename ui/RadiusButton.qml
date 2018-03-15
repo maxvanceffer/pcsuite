@@ -4,8 +4,10 @@ Image {
     id: btn
     clip: true
     smooth: true
-    width: 30
-    height: 30
+    width: size
+    height: size
+
+    property double size: 30
 
     signal clicked()
 

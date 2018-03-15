@@ -8,6 +8,7 @@ class Device(QObject):
     __updating = False
     __connected = False
     __available = False
+    __mm_support = False
 
     __name = ''
     __host = ''
@@ -15,6 +16,7 @@ class Device(QObject):
     __image = 'images/unknown_device.png'
     __services = []
     __type = 'unknown'
+    __vendor = ''
 
     """ Signals """
     nameChanged = pyqtSignal()
@@ -25,6 +27,10 @@ class Device(QObject):
     servicesChanged = pyqtSignal()
     availableChanged = pyqtSignal()
     typeChanged = pyqtSignal()
+    vendorChanged = pyqtSignal()
+    mmControlsSupportChanged = pyqtSignal()
+
+    major_classes = ("miscellaneous", "computer", "phone", "lan", "multimedia", "peripheral", "imaging")
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -38,6 +44,26 @@ class Device(QObject):
         if name != self.__name:
             self.__name = name
             self.nameChanged.emit()
+
+    @pyqtProperty('QString', notify=vendorChanged)
+    def vendor(self):
+        return self.__vendor
+
+    @vendor.setter
+    def vendor(self, vendor):
+        if vendor != self.__vendor:
+            self.__vendor = vendor
+            self.vendorChanged.emit()
+
+    @pyqtProperty('bool', notify=mmControlsSupportChanged)
+    def mm_controls_supported(self):
+        return self.__mm_support
+
+    @mm_controls_supported.setter
+    def mm_controls_supported(self, supported):
+        if supported != self.__mm_support:
+            self.__mm_support = supported
+            self.mmControlsSupportChanged.emit()
 
     @pyqtProperty('QString', notify=hostChanged)
     def host(self):
@@ -57,8 +83,13 @@ class Device(QObject):
     def class_id(self, class_id):
         if class_id != self.__class_id:
             self.__class_id = class_id
-            self.type = class_id
             self.classChanged.emit()
+
+            major_class = (int(class_id) >> 8) & 0xf
+            if major_class < 7:
+                self.type = self.major_classes[major_class]
+            else:
+                self.type = 'unknown'
 
     @pyqtProperty('QString', notify=imageChanged)
     def image(self):
@@ -66,8 +97,8 @@ class Device(QObject):
 
     @image.setter
     def image(self, image):
-        if image != self.__class_id:
-            self.__class_id = image
+        if image != self.__image:
+            self.__image = image
             self.classChanged.emit()
 
     @pyqtProperty('QVariantMap', notify=servicesChanged)
@@ -78,6 +109,10 @@ class Device(QObject):
     def services(self, services):
         self.__services = services
         self.servicesChanged.emit()
+
+        self.mm_controls_supported = \
+            self.has_service('name', 'AVRCP Device') or \
+            self.has_service('description', 'Remote Control Device')
 
     @pyqtProperty('bool', notify=availableChanged)
     def available(self):
@@ -103,15 +138,9 @@ class Device(QObject):
         return self.__type
 
     @type.setter
-    def type(self, id_of_type):
-        real_type = self.__type
-        if id_of_type is not None and str(hex(int(id_of_type))) == '0x5a020c' or str(hex(int(id_of_type))) == '0x7a020c':
-            real_type = 'phone'
-        elif id_of_type is None and str(hex(int(id_of_type))) == '0x240404':
-            real_type = 'speaker'
-
-        if real_type != self.__type:
-            self.__type = real_type
+    def type(self, type_name):
+        if type_name != self.__type:
+            self.__type = type_name
             self.updatingChanged.emit()
 
     @pyqtSlot()
@@ -129,3 +158,19 @@ class Device(QObject):
 
         Manager.Manager().find_device_state(self)
 
+    def get_service_by_name(self, name):
+        for service in self.__services:
+            if 'name' in service and service['name'] == name:
+                return service
+
+        return None
+
+    def has_service(self, prop, value):
+        for service in self.__services:
+            if prop in service and service[prop] == value:
+                return True
+
+        return False
+
+    def is_empty(self):
+        return self.host is None and len(self.host) == 0

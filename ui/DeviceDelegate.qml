@@ -5,6 +5,8 @@ import "."
 Item {
     height: layout.implicitHeight + 20
 
+    SystemPalette { id: myPalette; colorGroup: SystemPalette.Active }
+
     Theme {
         id: theme
     }
@@ -22,7 +24,7 @@ Item {
         width: 48
         height: 48
 
-        source: "images/phone.svg"
+        source: "images/device_%1.svg".arg(type)
         smooth: true
         antialiasing: true
 
@@ -40,18 +42,21 @@ Item {
             text: name
             font.bold: true
             font.pixelSize: theme.titlePixelSize
+            color: myPalette.windowText
         }
 
         Label {
             text: qsTr("   <b>MAC</b>: %1").arg(address)
             font.bold: true
             font.pixelSize: theme.subtitlePixelSize
+            color: myPalette.windowText
         }
 
         Label {
             text: qsTr("   <b>ID</b>: %1").arg(classId)
             font.bold: true
             font.pixelSize: theme.subtitlePixelSize
+            color: myPalette.windowText
         }
     }
 

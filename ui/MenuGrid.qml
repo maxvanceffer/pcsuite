@@ -14,6 +14,7 @@ Item {
 
     property int cellWidth: 100
     property int cellHeight: 100
+    property double cellIconSize: 40
 
     Timer {
         id: update_cell_size_timer
@@ -27,6 +28,7 @@ Item {
     {
         cellWidth  = Math.max((Math.round(width / gridView.columns)), 100) - 40
         cellHeight = Math.max((Math.round(height / gridView.columns)), 100) - 40
+        cellIconSize = Math.min(cellWidth, cellHeight) - 60
     }
 
     Grid {
@@ -46,6 +48,7 @@ Item {
             model: BTNotifier.services
 
             Item {
+                id: delegateItem
                 width: cellWidth
                 height: 100
 
@@ -53,8 +56,8 @@ Item {
                     anchors.fill: parent
 
                     Image {
-                        width: 40
-                        height: 40
+                        width: cellIconSize
+                        height: cellIconSize
                         source: additional[name].icon
 
                         Layout.alignment: Qt.AlignHCenter

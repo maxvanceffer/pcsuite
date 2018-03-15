@@ -47,6 +47,24 @@ ApplicationWindow {
             horizontalOffset: 8
             verticalOffset: 8
         }
+
+        Image {
+            source: "images/play.svg"
+
+            width: 20
+            height: 20
+
+            visible: BTManager.my_device.mm_controls_supported
+
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: 10
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: console.log('play clicked')
+            }
+        }
     }
 
     Sidebar {

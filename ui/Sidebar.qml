@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.3
+import QtQuick.Dialogs 1.0
 
 Item {
     Theme {
@@ -9,6 +10,22 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: theme.sidebarColor
+    }
+
+    FileDialog {
+        id: fileDialog
+        title: "Please choose a file"
+        folder: shortcuts.home
+        onAccepted: {
+            console.log("You chose: " + fileDialog.fileUrls)
+            var files = [fileDialog.fileUrls]
+            BTManager.send_file(fileDialog.fileUrls)
+            visible = false
+        }
+        onRejected: {
+            console.log("Canceled")
+            visible = false
+        }
     }
 
     Image {
@@ -33,6 +50,13 @@ Item {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: 10
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: BTNotifier.tooltip = qsTr("Connecting to %1").arg(BTManager.my_device.name)
+                onExited: BTNotifier.tooltip = ''
+            }
         }
 
         Image {
@@ -41,7 +65,7 @@ Item {
             height: 20
             smooth: true
             fillMode: Image.PreserveAspectFit
-            visible: (BTManager.my_device.host && BTManager.my_device.host.length) || !BTManager.my_device.updating
+            visible: (BTManager.my_device.host && BTManager.my_device.host.length) && !BTManager.my_device.updating
 
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -83,5 +107,18 @@ Item {
         anchors.margins: 20
         color: theme.sidebarTextColor
         visible: (BTManager.my_device && BTManager.my_device.name != undefined && BTManager.my_device.name.length > 0)
+    }
+
+    Column {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+
+        RadiusButton {
+            size: 45
+            source: 'images/up.svg'
+
+            onClicked: fileDialog.visible = true
+        }
     }
 }

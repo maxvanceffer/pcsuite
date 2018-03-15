@@ -1,83 +1,15 @@
 import threading
 import bluetooth
 
-from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot, QThread, QSettings
+from PyQt5.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot, QSettings, QFile
 from PyQt5.QtQml import QQmlListProperty
+from PyQt5.QtBluetooth import QBluetoothTransferManager, QBluetoothTransferRequest, QBluetoothAddress
 
 import Device
-
-
-class DiscoveryThread(QThread):
-
-    done = pyqtSignal()
-    iteration = pyqtSignal(list)
-    dongleNotFound = pyqtSignal(bool)
-
-    drop_cache = True
-
-    def run(self):
-        print("discovery thread started ", threading.get_ident())
-        event = threading.Event()
-        try:
-            nearby_devices = bluetooth.discover_devices(lookup_names=True, flush_cache=self.drop_cache, lookup_class=True)
-            print('found devices %d ' % len(nearby_devices))
-            self.iteration.emit(nearby_devices)
-            event.wait()
-            self.done.emit()
-            self.dongleNotFound.emit(True)
-        except OSError as e:
-            print('Bluetooth library error %s' % e)
-            self.dongleNotFound.emit(False)
-            event.wait()
-            self.done.emit()
-
-
-def my__discover(searcher):
-    print("start discovery in thread ", threading.get_ident())
-    try:
-        import bluetooth
-        nearby_devices = bluetooth.discover_devices(lookup_names=True, flush_cache=False, lookup_class=True)
-        print("found %d devices" % len(nearby_devices))
-
-        searcher.found([])
-    except Exception as e:
-        print(e)
-        searcher.found([])
-
-
-def my__services(target):
-    if target == "all": target = None
-
-    services = bluetooth.find_service(address=target)
-
-    if len(services) > 0:
-        print("found %d services on %s" % (len(services), target))
-        print("")
-    else:
-        print("no services found")
-
-    print('Callback')
-    return services
-
-
-def discover_device_status(device):
-    nearby_devices = bluetooth.discover_devices(lookup_names=True, flush_cache=False, lookup_class=True, duration=10)
-    print("found %d devices near by" % len(nearby_devices))
-
-    for host, name, class_id in nearby_devices:
-        if host == device.host():
-            print('Target device found in range')
-            device.set_available(True)
-
-            # Search device services
-            services = bluetooth.find_service(address=device.host())
-
-            if len(services) > 0:
-                print("found %d services on %s" % (len(services), device.host()))
-                print("")
-                device.set_services(services)
-            else:
-                print("no services found for % device" % device.host())
+import Sms
+import SendSmsThread
+import DiscoveryThread
+import ConnectDeviceThread
 
 
 class Manager(QObject):
@@ -93,6 +25,9 @@ class Manager(QObject):
 
     ''' Threads '''
     __task = None
+    __device_state = None
+    __threads = []
+    __transfer_manager = None
 
     """ Signals """
     searchingChanged = pyqtSignal()
@@ -105,19 +40,20 @@ class Manager(QObject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.__transfer_manager = QBluetoothTransferManager()
         self.__device = Device.Device()
-
         self.__settings = QSettings("PCSuite", "maxvanceffer")
 
+        self.__settings.beginGroup("device")
         all_groups = self.__settings.allKeys()
-        if 'device' in all_groups:
-            self.__settings.beginGroup("device")
-
+        if len(all_groups):
             self.__device.host = self.__settings.value('host')
             self.__device.name = self.__settings.value('name')
             self.__device.class_id = self.__settings.value('class_id')
 
-            self.__settings.endGroup()
+        self.__settings.endGroup()
+        if self.__device.is_empty() is False:
+            self.find_device_state(self.__device)
 
     def notifier(self):
         return self.__notifier
@@ -175,7 +111,7 @@ class Manager(QObject):
         self.__near_by.clear()
         self.nearByDevicesChanged.emit()
 
-        self.__task = DiscoveryThread()
+        self.__task = DiscoveryThread.DiscoveryThread()
         self.__task.drop_cache = drop_cache
         self.__task.done.connect(self.__task.terminate)
         self.__task.dongleNotFound.connect(self.dongle_status)
@@ -198,19 +134,27 @@ class Manager(QObject):
         # self.__pool.map_async(my__services, args=(self.__services_found, self.__services_done, target))
         # x = Process(target=my__services, args=(self.__services_found, self.__services_done, target))
         # x.start()
-
-        self.res = self.__pool.apply_async(my__services, (target, ), callback=self.__services_found)
         # print('V is ')
 
     @pyqtSlot()
     def find_device_state(self, device):
-        print('Start search for device [%s] status' % device.host())
-        self.__pool.apply_async(discover_device_status, (device, ), callback=self.find_device_state_found)
+        if device is None or device.is_empty():
+            print('Device is empty, can check it\'s state')
+            return
+
+        if self.__device_state and self.__device_state.device.host == device.host:
+            print('Already scanning device for it\'s state')
+            return
+
+        print('Start search for device [%s] status' % device.host)
+        self.__device_state = ConnectDeviceThread.ConnectDeviceThread(self)
+        self.__device_state.device = self.__device
+        self.__device_state.done.connect(self.find_device_state_found)
+        self.__device_state.run()
 
     @staticmethod
-    def find_device_state_found(device):
-        print('Device status found ', device.name())
-        device.set_updating(False)
+    def find_device_state_found():
+        print('Device status found ')
 
     @pyqtSlot()
     def local_address(self):
@@ -269,12 +213,33 @@ class Manager(QObject):
 
     @pyqtSlot(str, str)
     def send_sms(self, to, message):
-        sockfd = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        sockfd.connect((self.__device.host, 1))  # BT Address
-        res = sockfd.send('ATZ\r')
-        res = sockfd.send('AT+CMGF=1\r')
-        res = sockfd.send('AT+CMGS=”'+to+'”\r')  # TO PhoneNumber
-        res = sockfd.send(message+'\n')
-        res = sockfd.send(chr(26))  # CTRL+Z
-        sockfd.close()
+        sms = Sms.Sms(self)
+        sms.to_phone = to
+        sms.from_phone = '06875989'
+        sms.message = message
+        sms.device = self.__device
 
+        sms_thread = SendSmsThread.SendSmsThread()
+
+        sms_thread.done.connect(sms_thread.terminate)
+        sms_thread.error.connect(sms_thread.terminate)
+
+        sms_thread.sms = sms
+        sms_thread.run()
+
+    @pyqtSlot(str)
+    def send_file(self, path):
+        print('Sending file %s' % path)
+
+        address = QBluetoothAddress(self.__device.host)
+        request = QBluetoothTransferRequest(address)
+        file = QFile(path)
+        reply = self.__transfer_manager.put(request, file)
+        # if reply:
+            # reply.transferProgress.connect(self.progress)
+        # else:
+            # print('oooops no reply')
+
+    def progress(self, current, total):
+        print('Progress send %d' % current)
+        print('Progress send %d' % total)
